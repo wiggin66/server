@@ -160,7 +160,7 @@ class TritonLocalClientBackend : public ClientBackend {
         http_headers_(http_headers),
         loader_(
             "/opt/tritonserver", "system",
-            "/tmp/host/docker-data/model_unit_test/")
+            "/tmp/host/docker-data/model_unit_test/", "sig_tag0")
   {
   }
 

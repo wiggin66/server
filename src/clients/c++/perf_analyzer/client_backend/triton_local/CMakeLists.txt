@@ -30,6 +30,7 @@ set(
     TRITON_LOCAL_CLIENT_BACKEND_SRCS
     triton_local_client_backend.cc
     shared_library.cc
+    triton_loader.cc
 )
 
 set(
