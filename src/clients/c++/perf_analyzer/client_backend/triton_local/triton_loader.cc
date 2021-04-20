@@ -33,6 +33,95 @@
 
 namespace cb = perfanalyzer::clientbackend;
 namespace perfanalyzer { namespace clientbackend {
+namespace {
+bool enforce_memory_type = false;
+TRITONSERVER_MemoryType requested_memory_type;
+/// Helper function for allocating memory
+TRITONSERVER_Error*
+ResponseAlloc(
+    TRITONSERVER_ResponseAllocator* allocator, const char* tensor_name,
+    size_t byte_size, TRITONSERVER_MemoryType preferred_memory_type,
+    int64_t preferred_memory_type_id, void* userp, void** buffer,
+    void** buffer_userp, TRITONSERVER_MemoryType* actual_memory_type,
+    int64_t* actual_memory_type_id)
+{
+  // Initially attempt to make the actual memory type and id that we
+  // allocate be the same as preferred memory type
+  *actual_memory_type = preferred_memory_type;
+  *actual_memory_type_id = preferred_memory_type_id;
+
+  // If 'byte_size' is zero just return 'buffer' == nullptr, we don't
+  // need to do any other book-keeping.
+  if (byte_size == 0) {
+    *buffer = nullptr;
+    *buffer_userp = nullptr;
+    std::cout << "allocated " << byte_size << " bytes for result tensor "
+              << tensor_name << std::endl;
+  } else {
+    void* allocated_ptr = nullptr;
+    if (enforce_memory_type) {
+      *actual_memory_type = requested_memory_type;
+    }
+
+    switch (*actual_memory_type) {
+      // Use CPU memory if the requested memory type is unknown
+      // (default case).
+      case TRITONSERVER_MEMORY_CPU:
+      default: {
+        *actual_memory_type = TRITONSERVER_MEMORY_CPU;
+        allocated_ptr = malloc(byte_size);
+        break;
+      }
+    }
+
+    // Pass the tensor name with buffer_userp so we can show it when
+    // releasing the buffer.
+    if (allocated_ptr != nullptr) {
+      *buffer = allocated_ptr;
+      *buffer_userp = new std::string(tensor_name);
+      std::cout << "allocated " << byte_size << " bytes in "
+                << size_t(*actual_memory_type) << " for result tensor "
+                << tensor_name << std::endl;
+    }
+  }
+
+  return nullptr;  // Success
+}
+
+/// Helper function for allocating memory
+TRITONSERVER_Error*
+ResponseRelease(
+    TRITONSERVER_ResponseAllocator* allocator, void* buffer, void* buffer_userp,
+    size_t byte_size, TRITONSERVER_MemoryType memory_type,
+    int64_t memory_type_id)
+{
+  std::string* name = nullptr;
+  if (buffer_userp != nullptr) {
+    name = reinterpret_cast<std::string*>(buffer_userp);
+  } else {
+    name = new std::string("<unknown>");
+  }
+
+  std::cout << "Releasing buffer " << buffer << " of size " << byte_size
+            << " in " << size_t(memory_type) << " for result '" << *name << "'"
+            << std::endl;
+  switch (memory_type) {
+    case TRITONSERVER_MEMORY_CPU:
+      free(buffer);
+      break;
+    default:
+      std::cerr << "error: unexpected buffer allocated in CUDA managed memory"
+                << std::endl;
+      break;
+  }
+
+  delete name;
+
+  return nullptr;  // Success
+}
+
+}  // namespace
+
 TritonLoader::TritonLoader(
     std::string library_directory, std::string memory_type,
     std::string model_repository_path, std::string model_name)
@@ -40,7 +129,10 @@ TritonLoader::TritonLoader(
       model_repository_path_(model_repository_path), model_name_(model_name)
 {
   cb::Error status = LoadServerLibrary();
+  assert(status.IsOk());
   status = StartTriton(memory_type, true);
+  assert(status.IsOk());
+  status = LoadModel();
   assert(status.IsOk());
 }
 
@@ -58,6 +150,8 @@ TritonLoader::StartTriton(std::string& memory_type, bool isVerbose)
     } else {
       RETURN_ERROR("Specify one of the following types: system, pinned or gpu");
     }
+    requested_memory_type = requested_memory_type_;
+    enforce_memory_type = enforce_memory_type_;
   }
 
   if (isVerbose) {
@@ -228,6 +322,20 @@ TritonLoader::LoadModel()
         ParseModelMetadata(model_metadata, &is_int, &is_torch_model),
         "parsing model metadata");
   }
+  std::cout << "loaded model " << model_name_ << std::endl;
+  // Create the allocator that will be used to allocate buffers for
+  // the result tensors.
+  RETURN_IF_TRITONSERVER_ERROR(
+      response_allocator_new_fn_(
+          &allocator_,
+          reinterpret_cast<
+              TRITONSERVER_Error* (*)(TRITONSERVER_ResponseAllocator * allocator, const char* tensor_name, size_t byte_size, TRITONSERVER_MemoryType memory_type, int64_t memory_type_id, void* userp, void** buffer, void** buffer_userp, TRITONSERVER_MemoryType* actual_memory_type, int64_t* actual_memory_type_id)>(
+              ResponseAlloc),
+          reinterpret_cast<
+              TRITONSERVER_Error* (*)(TRITONSERVER_ResponseAllocator * allocator, void* buffer, void* buffer_userp, size_t byte_size, TRITONSERVER_MemoryType memory_type, int64_t memory_type_id)>(
+              ResponseRelease),
+          nullptr /* start_fn */),
+      "creating response allocator");
   return Error::Success;
 }
 
@@ -514,8 +622,8 @@ TritonLoader::ClearHandles()
 
   options_ = nullptr;
   server_ptr_ = nullptr;
+  allocator_ = nullptr;
 }
-
 
 Error
 TritonLoader::FileExists(std::string& filepath)
@@ -570,5 +678,6 @@ TritonLoader::ParseModelMetadata(
       (strcmp(model_metadata["platform"].GetString(), "pytorch_libtorch") == 0);
   return nullptr;
 }
+
 
 }}  // namespace perfanalyzer::clientbackend

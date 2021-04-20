@@ -292,6 +292,7 @@ class TritonLoader {
 
   TRITONSERVER_ServerOptions* options_;
   TRITONSERVER_Server* server_ptr_;
+  TRITONSERVER_ResponseAllocator* allocator_ = nullptr;
   std::shared_ptr<TRITONSERVER_Server> server_;
   const std::string library_directory_;
   const std::string SERVER_LIBRARY_PATH = "/lib/libtritonserver.so";
