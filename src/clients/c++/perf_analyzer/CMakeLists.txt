@@ -44,6 +44,7 @@ set(
   request_rate_manager.cc
   custom_load_manager.cc
   inference_profiler.cc
+  error.cc
 )
 
 set(
@@ -56,6 +57,7 @@ set(
   request_rate_manager.h
   custom_load_manager.h
   inference_profiler.h
+  error.h
 )
 
 add_executable(

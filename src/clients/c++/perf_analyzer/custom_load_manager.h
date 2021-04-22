@@ -62,8 +62,8 @@ class CustomLoadManager : public RequestRateManager {
   /// \param factory The ClientBackendFactory object used to create
   /// client to the server.
   /// \param manager Returns a new ConcurrencyManager object.
-  /// \return cb::Error object indicating success or failure.
-  static cb::Error Create(
+  /// \return Error object indicating success or failure.
+  static Error Create(
       const bool async, const bool streaming,
       const uint64_t measurement_window_ms,
       const std::string& request_intervals_file, const int32_t batch_size,
@@ -78,15 +78,15 @@ class CustomLoadManager : public RequestRateManager {
 
   /// Initializes the load manager with the provided file containing request
   /// intervals
-  /// \return cb::Error object indicating success or failure.
-  cb::Error InitCustomIntervals();
+  /// \return Error object indicating success or failure.
+  Error InitCustomIntervals();
 
   /// Computes the request rate from the time interval file. Fails with an error
   /// if the file is not present or is empty.
   /// \param request_rate Returns request rate as computed from the time
   /// interval file.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error GetCustomRequestRate(double* request_rate);
+  /// \return Error object indicating success or failure.
+  Error GetCustomRequestRate(double* request_rate);
 
  private:
   CustomLoadManager(

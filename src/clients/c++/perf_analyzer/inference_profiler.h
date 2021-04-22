@@ -158,8 +158,8 @@ class InferenceProfiler {
   /// \param manager The LoadManager object that will produce load on the
   /// server.
   /// \param profiler Returns a new InferenceProfiler object.
-  /// \return cb::Error object indicating success or failure.
-  static cb::Error Create(
+  /// \return Error object indicating success or failure.
+  static Error Create(
       const bool verbose, const double stability_threshold,
       const uint64_t measurement_window_ms, const size_t max_trials,
       const int64_t percentile, const uint64_t latency_threshold_ms,
@@ -178,13 +178,13 @@ class InferenceProfiler {
   /// \param search_mode The search algorithm to be applied.
   /// \param summary Returns the trace of the measurement along the search
   /// path.
-  /// \return cb::Error object indicating success or failure.
+  /// \return Error object indicating success or failure.
   template <typename T>
-  cb::Error Profile(
+  Error Profile(
       const T start, const T end, const T step, const SearchMode search_mode,
       std::vector<PerfStatus>& summary)
   {
-    cb::Error err;
+    Error err;
     bool meets_threshold;
     if (search_mode == SearchMode::NONE) {
       err = Profile(summary, &meets_threshold);
@@ -226,7 +226,7 @@ class InferenceProfiler {
         }
       }
     }
-    return cb::Error::Success;
+    return Error::Success;
   }
 
   bool IncludeServerStats() { return include_server_stats_; }
@@ -252,8 +252,8 @@ class InferenceProfiler {
   /// \param concurrent_request_count The concurrency level for the measurement.
   /// \param summary Appends the measurements summary at the end of this list.
   /// \param meets_threshold Returns whether the setting meets the threshold.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error Profile(
+  /// \return Error object indicating success or failure.
+  Error Profile(
       const size_t concurrent_request_count, std::vector<PerfStatus>& summary,
       bool* meets_threshold);
 
@@ -262,8 +262,8 @@ class InferenceProfiler {
   /// \param request_rate The request rate for inferences.
   /// \param summary Appends the measurements summary at the end of this list.
   /// \param meets_threshold Returns whether the setting meets the threshold.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error Profile(
+  /// \return Error object indicating success or failure.
+  Error Profile(
       const double request_rate, std::vector<PerfStatus>& summary,
       bool* meets_threshold);
 
@@ -272,31 +272,31 @@ class InferenceProfiler {
   /// a file specifying the time intervals.
   /// \param summary Appends the measurements summary at the end of this list.
   /// \param meets_threshold Returns whether the measurement met the threshold.
-  /// \return cb::Error object indicating success
+  /// \return Error object indicating success
   /// or failure.
-  cb::Error Profile(std::vector<PerfStatus>& summary, bool* meets_threshold);
+  Error Profile(std::vector<PerfStatus>& summary, bool* meets_threshold);
 
   /// A helper function for profiling functions.
   /// \param clean_starts Whether or not to reset load cycle with every
   /// measurement trials.
   /// \param status_summary Returns the summary of the measurement.
   /// \param is_stable Returns whether the measurement stabilized or not.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error ProfileHelper(
+  /// \return Error object indicating success or failure.
+  Error ProfileHelper(
       const bool clean_starts, PerfStatus& status_summary, bool* is_stable);
 
   /// Helper function to perform measurement.
   /// \param status_summary The summary of this measurement.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error Measure(PerfStatus& status_summary);
+  /// \return Error object indicating success or failure.
+  Error Measure(PerfStatus& status_summary);
 
   /// Gets the server side statistics
   /// \param model_status Returns the status of the models provided by
   /// the server. If the model being profiled is non-ensemble model,
   /// only its status will be returned. Otherwise, the status of the composing
   /// models will also be returned.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error GetServerSideStatus(
+  /// \return Error object indicating success or failure.
+  Error GetServerSideStatus(
       std::map<cb::ModelIdentifier, cb::ModelStatistics>* model_status);
 
   /// Sumarize the measurement with the provided statistics.
@@ -307,8 +307,8 @@ class InferenceProfiler {
   /// \param start_stat The accumulated context status at the start.
   /// \param end_stat The accumulated context status at the end.
   /// \param summary Returns the summary of the measurement.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error Summarize(
+  /// \return Error object indicating success or failure.
+  Error Summarize(
       const TimestampVector& timestamps,
       const std::map<cb::ModelIdentifier, cb::ModelStatistics>& start_status,
       const std::map<cb::ModelIdentifier, cb::ModelStatistics>& end_status,
@@ -339,8 +339,8 @@ class InferenceProfiler {
   /// \param latencies The vector of request latencies collected.
   /// \param summary Returns the summary that the latency related fields are
   /// set.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error SummarizeLatency(
+  /// \return Error object indicating success or failure.
+  Error SummarizeLatency(
       const std::vector<uint64_t>& latencies, PerfStatus& summary);
 
   /// \param start_stat The accumulated client statistics at the start.
@@ -352,8 +352,8 @@ class InferenceProfiler {
   /// schedule.
   /// \param summary Returns the summary that the fields recorded by
   /// client are set.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error SummarizeClientStat(
+  /// \return Error object indicating success or failure.
+  Error SummarizeClientStat(
       const cb::InferStat& start_stat, const cb::InferStat& end_stat,
       const uint64_t duration_ns, const size_t valid_request_count,
       const size_t delayed_request_count, const size_t valid_sequence_count,
@@ -365,8 +365,8 @@ class InferenceProfiler {
   /// \param end_status The model status at the end of the measurement.
   /// \param server_stats Returns the summary that the fields recorded by server
   /// are set.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error SummarizeServerStatsHelper(
+  /// \return Error object indicating success or failure.
+  Error SummarizeServerStatsHelper(
       const cb::ModelIdentifier& model_identifier,
       const std::map<cb::ModelIdentifier, cb::ModelStatistics>& start_status,
       const std::map<cb::ModelIdentifier, cb::ModelStatistics>& end_status,
@@ -378,8 +378,8 @@ class InferenceProfiler {
   /// \param end_status The model status at the end of the measurement.
   /// \param server_stats Returns the summary that the fields recorded by server
   /// are set.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error SummarizeServerStats(
+  /// \return Error object indicating success or failure.
+  Error SummarizeServerStats(
       const cb::ModelIdentifier& model_identifier,
       const std::map<cb::ModelIdentifier, cb::ModelStatistics>& start_status,
       const std::map<cb::ModelIdentifier, cb::ModelStatistics>& end_status,
@@ -389,8 +389,8 @@ class InferenceProfiler {
   /// \param end_status The model status at the end of the measurement.
   /// \param server_stats Returns the summary that the fields recorded by server
   /// are set.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error SummarizeServerStats(
+  /// \return Error object indicating success or failure.
+  Error SummarizeServerStats(
       const std::map<cb::ModelIdentifier, cb::ModelStatistics>& start_status,
       const std::map<cb::ModelIdentifier, cb::ModelStatistics>& end_status,
       ServerSideStats* server_stats);

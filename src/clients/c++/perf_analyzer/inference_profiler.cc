@@ -77,7 +77,7 @@ GetOverheadDuration(size_t total_time, size_t queue_time, size_t compute_time)
              : 0;
 }
 
-cb::Error
+Error
 ReportServerSideStats(const ServerSideStats& stats, const int iteration)
 {
   const std::string ident = std::string(2 * iteration, ' ');
@@ -88,7 +88,7 @@ ReportServerSideStats(const ServerSideStats& stats, const int iteration)
   const uint64_t cnt = stats.success_count;
   if (cnt == 0) {
     std::cout << ident << "  Request count: " << cnt << std::endl;
-    return cb::Error::Success;
+    return Error::Success;
   }
 
   const uint64_t cumm_avg_us = AverageDurationInUs(stats.cumm_time_ns, cnt);
@@ -137,10 +137,10 @@ ReportServerSideStats(const ServerSideStats& stats, const int iteration)
     }
   }
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 ReportClientSideStats(
     const ClientSideStats& stats, const int64_t percentile,
     const cb::ProtocolType protocol, const bool verbose,
@@ -215,10 +215,10 @@ ReportClientSideStats(
 
   std::cout << client_library_detail << std::endl;
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 Report(
     const PerfStatus& summary, const int64_t percentile,
     const cb::ProtocolType protocol, const bool verbose,
@@ -234,12 +234,12 @@ Report(
     ReportServerSideStats(summary.server_stats, 1);
   }
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
 }  // namespace
 
-cb::Error
+Error
 InferenceProfiler::Create(
     const bool verbose, const double stability_threshold,
     const uint64_t measurement_window_ms, const size_t max_trials,
@@ -255,7 +255,7 @@ InferenceProfiler::Create(
       std::move(profile_backend), std::move(manager)));
 
   *profiler = std::move(local_profiler);
-  return cb::Error::Success;
+  return Error::Success;
 }
 
 InferenceProfiler::InferenceProfiler(
@@ -289,12 +289,12 @@ InferenceProfiler::InferenceProfiler(
   }
 }
 
-cb::Error
+Error
 InferenceProfiler::Profile(
     const size_t concurrent_request_count, std::vector<PerfStatus>& summary,
     bool* meets_threshold)
 {
-  cb::Error err;
+  Error err;
   PerfStatus status_summary;
 
   status_summary.concurrency = concurrent_request_count;
@@ -333,15 +333,15 @@ InferenceProfiler::Profile(
     return err;
   }
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 InferenceProfiler::Profile(
     const double request_rate, std::vector<PerfStatus>& summary,
     bool* meets_threshold)
 {
-  cb::Error err;
+  Error err;
   PerfStatus status_summary;
 
   status_summary.request_rate = request_rate;
@@ -377,14 +377,14 @@ InferenceProfiler::Profile(
     return err;
   }
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 InferenceProfiler::Profile(
     std::vector<PerfStatus>& summary, bool* meets_threshold)
 {
-  cb::Error err;
+  Error err;
   PerfStatus status_summary;
 
   RETURN_IF_ERROR(
@@ -420,17 +420,17 @@ InferenceProfiler::Profile(
     return err;
   }
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 InferenceProfiler::ProfileHelper(
     const bool clean_starts, PerfStatus& status_summary, bool* is_stable)
 {
   // Start measurement
   LoadStatus load_status;
   size_t completed_trials = 0;
-  std::queue<cb::Error> error;
+  std::queue<Error> error;
 
   do {
     RETURN_IF_ERROR(manager_->CheckHealth());
@@ -478,7 +478,7 @@ InferenceProfiler::ProfileHelper(
         }
       } else {
         std::cout << "  Pass [" << (completed_trials + 1)
-                  << "] cb::Error: " << error.back().Message() << std::endl;
+                  << "] Error: " << error.back().Message() << std::endl;
       }
     }
 
@@ -542,12 +542,12 @@ InferenceProfiler::ProfileHelper(
   }
 
   if (early_exit) {
-    return cb::Error("Received exit signal.");
+    return Error("Received exit signal.");
   }
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 InferenceProfiler::GetServerSideStatus(
     std::map<cb::ModelIdentifier, cb::ModelStatistics>* model_stats)
 {
@@ -558,11 +558,11 @@ InferenceProfiler::GetServerSideStatus(
     RETURN_IF_ERROR(profile_backend_->ModelInferenceStatistics(
         model_stats, parser_->ModelName(), parser_->ModelVersion()));
   }
-  return cb::Error::Success;
+  return Error::Success;
 }
 
 // Used for measurement
-cb::Error
+Error
 InferenceProfiler::Measure(PerfStatus& status_summary)
 {
   std::map<cb::ModelIdentifier, cb::ModelStatistics> start_status;
@@ -594,10 +594,10 @@ InferenceProfiler::Measure(PerfStatus& status_summary)
       current_timestamps, start_status, end_status, start_stat, end_stat,
       status_summary));
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 InferenceProfiler::Summarize(
     const TimestampVector& timestamps,
     const std::map<cb::ModelIdentifier, cb::ModelStatistics>& start_status,
@@ -626,7 +626,7 @@ InferenceProfiler::Summarize(
         start_status, end_status, &(summary.server_stats)));
   }
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
 void
@@ -697,12 +697,12 @@ InferenceProfiler::ValidLatencyMeasurement(
   std::sort(valid_latencies->begin(), valid_latencies->end());
 }
 
-cb::Error
+Error
 InferenceProfiler::SummarizeLatency(
     const std::vector<uint64_t>& latencies, PerfStatus& summary)
 {
   if (latencies.size() == 0) {
-    return cb::Error(
+    return Error(
         "No valid requests recorded within time interval."
         " Please use a larger time window.");
   }
@@ -748,10 +748,10 @@ InferenceProfiler::SummarizeLatency(
                         : 0;
   summary.client_stats.std_us = (uint64_t)(sqrt(var_us));
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 InferenceProfiler::SummarizeClientStat(
     const cb::InferStat& start_stat, const cb::InferStat& end_stat,
     const uint64_t duration_ns, const size_t valid_request_count,
@@ -791,10 +791,10 @@ InferenceProfiler::SummarizeClientStat(
     }
   }
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 InferenceProfiler::SummarizeServerStatsHelper(
     const cb::ModelIdentifier& model_identifier,
     const std::map<cb::ModelIdentifier, cb::ModelStatistics>& start_status,
@@ -817,7 +817,7 @@ InferenceProfiler::SummarizeServerStatsHelper(
   }
 
   if (status_model_version == -1) {
-    return cb::Error("failed to determine the requested model version");
+    return Error("failed to determine the requested model version");
   }
 
   const std::pair<std::string, std::string> this_id(
@@ -825,7 +825,7 @@ InferenceProfiler::SummarizeServerStatsHelper(
 
   const auto& end_itr = end_status.find(this_id);
   if (end_itr == end_status.end()) {
-    return cb::Error("missing statistics for requested model");
+    return Error("missing statistics for requested model");
   } else {
     uint64_t start_infer_cnt = 0;
     uint64_t start_exec_cnt = 0;
@@ -865,10 +865,10 @@ InferenceProfiler::SummarizeServerStatsHelper(
         end_itr->second.compute_output_time_ns_ - start_compute_output_time_ns;
   }
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 InferenceProfiler::SummarizeServerStats(
     const cb::ModelIdentifier& model_identifier,
     const std::map<cb::ModelIdentifier, cb::ModelStatistics>& start_status,
@@ -888,10 +888,10 @@ InferenceProfiler::SummarizeServerStats(
         composing_model_identifier, start_status, end_status, &(it->second)));
   }
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 InferenceProfiler::SummarizeServerStats(
     const std::map<cb::ModelIdentifier, cb::ModelStatistics>& start_status,
     const std::map<cb::ModelIdentifier, cb::ModelStatistics>& end_status,
@@ -900,7 +900,7 @@ InferenceProfiler::SummarizeServerStats(
   RETURN_IF_ERROR(SummarizeServerStats(
       std::make_pair(parser_->ModelName(), parser_->ModelVersion()),
       start_status, end_status, server_stats));
-  return cb::Error::Success;
+  return Error::Success;
 }
 
 }  // namespace perfanalyzer

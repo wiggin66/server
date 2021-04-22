@@ -76,8 +76,8 @@ class ModelParser {
   /// \param input_shapes The user provided default shapes which will be use
   /// if a certain input has wildcard in its dimension.
   /// \param backend The backend object.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error InitTriton(
+  /// \return Error object indicating success or failure.
+  Error InitTriton(
       const rapidjson::Document& metadata, const rapidjson::Document& config,
       const std::string& model_version,
       const std::unordered_map<std::string, std::vector<int64_t>>& input_shapes,
@@ -92,15 +92,15 @@ class ModelParser {
   /// \param input_shapes The user provided default shapes which will be use
   /// if a certain input has wildcard in its dimension.
   /// \param backend The backend object.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error InitTFServe(
+  /// \return Error object indicating success or failure.
+  Error InitTFServe(
       const rapidjson::Document& metadata, const std::string& model_name,
       const std::string& model_version, const std::string& model_signature_name,
       const int32_t batch_size,
       const std::unordered_map<std::string, std::vector<int64_t>>& input_shapes,
       std::unique_ptr<cb::ClientBackend>& backend);
 
-  cb::Error InitTorchServe(
+  Error InitTorchServe(
       const std::string& model_name, const std::string& model_version,
       const int32_t batch_size);
 
@@ -150,7 +150,7 @@ class ModelParser {
   }
 
  private:
-  cb::Error GetEnsembleSchedulerType(
+  Error GetEnsembleSchedulerType(
       const rapidjson::Document& config, const std::string& model_version,
       std::unique_ptr<cb::ClientBackend>& backend, bool* is_sequential);
 

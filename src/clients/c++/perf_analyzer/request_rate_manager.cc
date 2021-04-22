@@ -35,7 +35,7 @@ RequestRateManager::~RequestRateManager()
   StopWorkerThreads();
 }
 
-cb::Error
+Error
 RequestRateManager::Create(
     const bool async, const bool streaming,
     const uint64_t measurement_window_ms, Distribution request_distribution,
@@ -65,7 +65,7 @@ RequestRateManager::Create(
 
   *manager = std::move(local_manager);
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
 RequestRateManager::RequestRateManager(
@@ -89,7 +89,7 @@ RequestRateManager::RequestRateManager(
       new std::chrono::nanoseconds(2 * measurement_window_ms * 1000 * 1000));
 }
 
-cb::Error
+Error
 RequestRateManager::ChangeRequestRate(const double request_rate)
 {
   PauseWorkers();
@@ -97,16 +97,16 @@ RequestRateManager::ChangeRequestRate(const double request_rate)
   GenerateSchedule(request_rate);
   ResumeWorkers();
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 RequestRateManager::ResetWorkers()
 {
   PauseWorkers();
   ResumeWorkers();
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
 void

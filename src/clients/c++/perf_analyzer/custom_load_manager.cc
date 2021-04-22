@@ -28,7 +28,7 @@
 
 namespace perfanalyzer {
 
-cb::Error
+Error
 CustomLoadManager::Create(
     const bool async, const bool streaming,
     const uint64_t measurement_window_ms,
@@ -59,7 +59,7 @@ CustomLoadManager::Create(
 
   *manager = std::move(local_manager);
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
 CustomLoadManager::CustomLoadManager(
@@ -78,7 +78,7 @@ CustomLoadManager::CustomLoadManager(
 {
 }
 
-cb::Error
+Error
 CustomLoadManager::InitCustomIntervals()
 {
   schedule_.clear();
@@ -96,14 +96,14 @@ CustomLoadManager::InitCustomIntervals()
       }
     }
   }
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 CustomLoadManager::GetCustomRequestRate(double* request_rate)
 {
   if (custom_intervals_.empty()) {
-    return cb::Error("The custom intervals vector is empty");
+    return Error("The custom intervals vector is empty");
   }
   uint64_t total_time_ns = 0;
   for (auto interval : custom_intervals_) {
@@ -112,7 +112,7 @@ CustomLoadManager::GetCustomRequestRate(double* request_rate)
 
   *request_rate =
       (custom_intervals_.size() * 1000 * 1000 * 1000) / (total_time_ns);
-  return cb::Error::Success;
+  return Error::Success;
 }
 
 }  // namespace perfanalyzer

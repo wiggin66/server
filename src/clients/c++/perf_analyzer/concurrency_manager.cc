@@ -37,7 +37,7 @@ ConcurrencyManager::~ConcurrencyManager()
   StopWorkerThreads();
 }
 
-cb::Error
+Error
 ConcurrencyManager::Create(
     const bool async, const bool streaming, const int32_t batch_size,
     const size_t max_threads, const size_t max_concurrency,
@@ -65,7 +65,7 @@ ConcurrencyManager::Create(
 
   *manager = std::move(local_manager);
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
 ConcurrencyManager::ConcurrencyManager(
@@ -86,7 +86,7 @@ ConcurrencyManager::ConcurrencyManager(
   }
 }
 
-cb::Error
+Error
 ConcurrencyManager::ChangeConcurrencyLevel(
     const size_t concurrent_request_count)
 {
@@ -142,7 +142,7 @@ ConcurrencyManager::ChangeConcurrencyLevel(
   wake_signal_.notify_all();
 
   std::cout << "Request concurrency: " << concurrent_request_count << std::endl;
-  return cb::Error::Success;
+  return Error::Success;
 }
 
 // Function for worker threads.

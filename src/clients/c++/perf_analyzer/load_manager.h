@@ -40,28 +40,28 @@ class LoadManager {
   virtual ~LoadManager();
 
   /// Check if the load manager is working as expected.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error CheckHealth();
+  /// \return Error object indicating success or failure.
+  Error CheckHealth();
 
   /// Swap the content of the timestamp vector recorded by the load
   /// manager with a new timestamp vector
   /// \param new_timestamps The timestamp vector to be swapped.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error SwapTimestamps(TimestampVector& new_timestamps);
+  /// \return Error object indicating success or failure.
+  Error SwapTimestamps(TimestampVector& new_timestamps);
 
   /// Get the sum of all contexts' stat
   /// \param contexts_stat Returned the accumulated stat from all contexts
   /// in load manager
-  cb::Error GetAccumulatedClientStat(cb::InferStat* contexts_stat);
+  Error GetAccumulatedClientStat(cb::InferStat* contexts_stat);
 
   /// \return the batch size used for the inference requests
   size_t BatchSize() const { return batch_size_; }
 
   /// Resets all worker thread states to beginning of schedule.
-  /// \return cb::Error object indicating success or failure.
-  virtual cb::Error ResetWorkers()
+  /// \return Error object indicating success or failure.
+  virtual Error ResetWorkers()
   {
-    return cb::Error(
+    return Error(
         "resetting worker threads not supported for this load manager.");
   }
 
@@ -125,33 +125,33 @@ class LoadManager {
   /// \param zero_input Whether to use zero for model inputs.
   /// \param user_data The vector containing path/paths to user-provided data
   /// that can be a directory or path to a json data file.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error InitManagerInputs(
+  /// \return Error object indicating success or failure.
+  Error InitManagerInputs(
       const size_t string_length, const std::string& string_data,
       const bool zero_input, std::vector<std::string>& user_data);
 
   /// Helper function to allocate and prepare shared memory.
   /// from shared memory.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error InitSharedMemory();
+  /// \return Error object indicating success or failure.
+  Error InitSharedMemory();
 
   /// Helper function to prepare the InferContext for sending inference request.
   /// \param ctx The target InferContext object.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error PrepareInfer(InferContext* ctx);
+  /// \return Error object indicating success or failure.
+  Error PrepareInfer(InferContext* ctx);
 
   /// Helper function to prepare the InferContext for sending inference
   /// request in shared memory.
   /// \param ctx The target InferContext object.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error PrepareSharedMemoryInfer(InferContext* ctx);
+  /// \return Error object indicating success or failure.
+  Error PrepareSharedMemoryInfer(InferContext* ctx);
 
   /// Updates the input data to use for inference request
   /// \param inputs The vector of pointers to InferInput objects
   /// \param stream_index The data stream to use for next data
   /// \param step_index The step index to use for next data
-  /// \return cb::Error object indicating success or failure.
-  cb::Error UpdateInputs(
+  /// \return Error object indicating success or failure.
+  Error UpdateInputs(
       std::vector<cb::InferInput*>& inputs, int stream_index, int step_index);
 
   void SetInferSequenceOptions(
@@ -172,8 +172,8 @@ class LoadManager {
   /// \param inputs The vector of pointers to InferInput objects
   /// \param stream_index The data stream to use for next data
   /// \param step_index The step index to use for next data
-  /// \return cb::Error object indicating success or failure.
-  cb::Error SetInputs(
+  /// \return Error object indicating success or failure.
+  Error SetInputs(
       const std::vector<cb::InferInput*>& inputs, const int stream_index,
       const int step_index);
 
@@ -181,8 +181,8 @@ class LoadManager {
   /// \param inputs The vector of pointers to InferInput objects
   /// \param stream_index The data stream to use for next data
   /// \param step_index The step index to use for next data
-  /// \return cb::Error object indicating success or failure.
-  cb::Error SetInputsSharedMemory(
+  /// \return Error object indicating success or failure.
+  Error SetInputsSharedMemory(
       const std::vector<cb::InferInput*>& inputs, const int stream_index,
       const int step_index);
 
@@ -214,9 +214,9 @@ class LoadManager {
     ThreadStat() {}
 
     // The status of the worker thread
-    cb::Error status_;
+    Error status_;
     // The status of the callback thread for async requests
-    cb::Error cb_status_;
+    Error cb_status_;
     // The statistics of the InferContext
     std::vector<cb::InferStat> contexts_stat_;
     // The concurrency level that the worker should produce

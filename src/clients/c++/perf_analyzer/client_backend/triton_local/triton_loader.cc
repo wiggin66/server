@@ -128,7 +128,7 @@ TritonLoader::TritonLoader(
     : library_directory_(library_directory),
       model_repository_path_(model_repository_path), model_name_(model_name)
 {
-  cb::Error status = LoadServerLibrary();
+  Error status = LoadServerLibrary();
   assert(status.IsOk());
   status = StartTriton(memory_type, true);
   assert(status.IsOk());

@@ -57,7 +57,7 @@ class DataLoader {
   /// \param inputs The pointer to the map holding the information about
   /// input tensors of a model
   /// \param data_directory The path to the directory containing the data
-  cb::Error ReadDataFromDir(
+  Error ReadDataFromDir(
       std::shared_ptr<ModelTensorMap> inputs,
       const std::string& data_directory);
 
@@ -67,7 +67,7 @@ class DataLoader {
   /// \param json_file The json file containing the user-provided input
   /// data.
   /// Returns error object indicating status
-  cb::Error ReadDataFromJSON(
+  Error ReadDataFromJSON(
       std::shared_ptr<ModelTensorMap> inputs, const std::string& json_file);
 
   /// Generates the input data to use with the inference requests
@@ -80,7 +80,7 @@ class DataLoader {
   /// \param string_data The user provided string to use to populate
   /// string tensors
   /// Returns error object indicating status
-  cb::Error GenerateData(
+  Error GenerateData(
       std::shared_ptr<ModelTensorMap> inputs, const bool zero_input,
       const size_t string_length, const std::string& string_data);
 
@@ -91,7 +91,7 @@ class DataLoader {
   /// \param data Returns the pointer to the data for the requested input.
   /// \param batch1_size Returns the size of the input data in bytes.
   /// Returns error object indicating status
-  cb::Error GetInputData(
+  Error GetInputData(
       const ModelTensor& input, const int stream_id, const int step_id,
       const uint8_t** data_ptr, size_t* batch1_size);
 
@@ -102,7 +102,7 @@ class DataLoader {
   /// \param shape returns the pointer to the vector containing the shape
   /// values.
   /// Returns error object indicating status
-  cb::Error GetInputShape(
+  Error GetInputShape(
       const ModelTensor& input, const int stream_id, const int step_id,
       std::vector<int64_t>* shape);
 
@@ -114,7 +114,7 @@ class DataLoader {
   /// \param stream_index the stream index the data should be exported to.
   /// \param step_index the step index the data should be exported to.
   /// Returns error object indicating status
-  cb::Error ReadInputTensorData(
+  Error ReadInputTensorData(
       const rapidjson::Value& step, std::shared_ptr<ModelTensorMap> inputs,
       int stream_index, int step_index);
 

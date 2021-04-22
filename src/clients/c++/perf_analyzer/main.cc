@@ -1384,7 +1384,7 @@ main(int argc, char** argv)
     search_mode = pa::SearchMode::NONE;
   }
 
-  cb::Error err;
+  perfanalyzer::Error err;
   if (target_concurrency) {
     err = profiler->Profile<size_t>(
         concurrency_range[SEARCH_RANGE::kSTART],

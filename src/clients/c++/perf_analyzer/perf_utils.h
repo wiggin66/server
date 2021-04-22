@@ -38,24 +38,7 @@
 #include <random>
 
 #include "src/core/constants.h"
-
-#define RETURN_IF_ERROR(S)           \
-  do {                               \
-    const cb::Error& status__ = (S); \
-    if (!status__.IsOk()) {          \
-      return status__;               \
-    }                                \
-  } while (false)
-
-#define FAIL_IF_ERR(X, MSG)                                        \
-  {                                                                \
-    cb::Error err = (X);                                           \
-    if (!err.IsOk()) {                                             \
-      std::cerr << "error: " << (MSG) << ": " << err << std::endl; \
-      exit(1);                                                     \
-    }                                                              \
-  }
-
+#include "src/clients/c++/perf_analyzer/error.h"
 namespace cb = perfanalyzer::clientbackend;
 namespace pa = perfanalyzer;
 
@@ -87,7 +70,7 @@ constexpr uint64_t NO_LIMIT = 0;
 // \param datatype Returns the datatype in perf_analyzer space.
 // \return error status. Returns Non-Ok if an error is encountered during
 //  read operation.
-cb::Error ConvertDTypeFromTFS(
+Error ConvertDTypeFromTFS(
     const std::string& tf_dtype, std::string* datatype);
 
 // Parse the communication protocol type
@@ -98,14 +81,14 @@ cb::ProtocolType ParseProtocol(const std::string& str);
 // \param contents The character vector that will contain the data read
 // \return error status. Returns Non-Ok if an error is encountered during
 //  read operation.
-cb::Error ReadFile(const std::string& path, std::vector<char>* contents);
+Error ReadFile(const std::string& path, std::vector<char>* contents);
 
 // Reads the string from file specified by path into vector of strings
 // \param path The complete path to the file to be read
 // \param contents The string vector that will contain the data read
 // \return error status. Returns Non-Ok if an error is encountered during
 //  read operation.
-cb::Error ReadTextFile(
+Error ReadTextFile(
     const std::string& path, std::vector<std::string>* contents);
 
 // Reads the time intervals in microseconds from file specified by path into
@@ -114,7 +97,7 @@ cb::Error ReadTextFile(
 // \param contents The time interval vector that will contain the data read.
 // \return error status. Returns Non-Ok if an error is encountered during
 //  read operation.
-cb::Error ReadTimeIntervalsFile(
+Error ReadTimeIntervalsFile(
     const std::string& path, std::vector<std::chrono::nanoseconds>* contents);
 
 // To check whether the path points to a valid system directory
@@ -136,7 +119,7 @@ void SerializeStringTensor(
 
 // Serializes an explicit tensor read from the data file to the
 // raw bytes.
-cb::Error SerializeExplicitTensor(
+Error SerializeExplicitTensor(
     const rapidjson::Value& tensor, const std::string& dt,
     std::vector<char>* decoded_data);
 

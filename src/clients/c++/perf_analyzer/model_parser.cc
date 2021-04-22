@@ -35,7 +35,7 @@ namespace {
 // represented as strings. Protobuf doesn't provide an option to
 // disable this (sigh) so we need to correctly parse these fields
 // for ModelParser to receive appopriate requests.
-cb::Error
+Error
 GetInt(const rapidjson::Value& value, int64_t* integer_value)
 {
   if (value.IsString()) {
@@ -45,7 +45,7 @@ GetInt(const rapidjson::Value& value, int64_t* integer_value)
       *integer_value = std::atoll(str.c_str());
     }
     catch (...) {
-      return cb::Error(
+      return Error(
           std::string("unable to convert '") + str + "' to integer");
     }
 
@@ -54,15 +54,15 @@ GetInt(const rapidjson::Value& value, int64_t* integer_value)
   } else if (value.IsInt()) {
     *integer_value = value.GetInt();
   } else {
-    return cb::Error("failed to parse the integer value");
+    return Error("failed to parse the integer value");
   }
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
 }  // namespace
 
-cb::Error
+Error
 ModelParser::InitTriton(
     const rapidjson::Document& metadata, const rapidjson::Document& config,
     const std::string& model_version,
@@ -153,7 +153,7 @@ ModelParser::InitTriton(
           input_config["name"].GetStringLength());
       auto it = inputs_->find(name);
       if (it == inputs_->end()) {
-        return cb::Error("no metadata found for input tensor " + name);
+        return Error("no metadata found for input tensor " + name);
       }
       const auto& shape_tensor_itr = input_config.FindMember("is_shape_tensor");
       if (shape_tensor_itr != input_config.MemberEnd()) {
@@ -192,7 +192,7 @@ ModelParser::InitTriton(
           output_config["name"].GetStringLength());
       auto itr = outputs_->find(name);
       if (itr == outputs_->end()) {
-        return cb::Error("no metadata found for output tensor " + name);
+        return Error("no metadata found for output tensor " + name);
       }
       const auto& shape_tensor_itr =
           output_config.FindMember("is_shape_tensor");
@@ -201,10 +201,10 @@ ModelParser::InitTriton(
       }
     }
   }
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 ModelParser::InitTFServe(
     const rapidjson::Document& metadata, const std::string& model_name,
     const std::string& model_version, const std::string& model_signature_name,
@@ -225,7 +225,7 @@ ModelParser::InitTFServe(
   const rapidjson::Value& signature_config =
       metadata["metadata"]["signature_def"]["signature_def"];
   if (!signature_config.HasMember(model_signature_name.c_str())) {
-    return cb::Error(
+    return Error(
         "Failed to find signature_name \"" + model_signature_name +
         "\" in the metadata");
   }
@@ -245,7 +245,7 @@ ModelParser::InitTFServe(
       bool is_dynamic = false;
       if (json_itr->value["tensor_shape"]["unknown_rank"].GetBool()) {
         if (max_batch_size_ != 0) {
-          return cb::Error(
+          return Error(
               "Can not specify -b flag for saved model with unknown ranked "
               "inputs");
         }
@@ -258,7 +258,7 @@ ModelParser::InitTFServe(
           RETURN_IF_ERROR(GetInt(dim["size"], &dim_int));
           if (first_dim && (max_batch_size_ != 0)) {
             if (dim_int != -1) {
-              return cb::Error(
+              return Error(
                   "Can not specify -b flag for saved model with input not "
                   "having their first dim as -1");
             }
@@ -291,10 +291,10 @@ ModelParser::InitTFServe(
   // See here
   // https://github.com/tensorflow/serving/blob/2.3.0/tensorflow_serving/apis/predict.proto#L27
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 ModelParser::InitTorchServe(
     const std::string& model_name, const std::string& model_version,
     const int32_t batch_size)
@@ -313,10 +313,10 @@ ModelParser::InitTorchServe(
   // Supports only a single input file
   it->second.shape_.push_back(1);
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
-cb::Error
+Error
 ModelParser::GetEnsembleSchedulerType(
     const rapidjson::Document& config, const std::string& model_version,
     std::unique_ptr<cb::ClientBackend>& backend, bool* is_sequential)
@@ -348,7 +348,7 @@ ModelParser::GetEnsembleSchedulerType(
     }
   }
 
-  return cb::Error::Success;
+  return Error::Success;
 }
 
 }  // namespace perfanalyzer

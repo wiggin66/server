@@ -36,50 +36,9 @@
 #include <vector>
 
 #include "src/clients/c++/library/ipc.h"
-
-#define RETURN_IF_CB_ERROR(S)    \
-  do {                           \
-    const Error& status__ = (S); \
-    if (!status__.IsOk()) {      \
-      return status__;           \
-    }                            \
-  } while (false)
-
-#define RETURN_ERROR(S) \
-  do {                  \
-    return Error(S);    \
-  } while (false)
+#include "src/clients/c++/perf_analyzer/error.h"
 
 namespace perfanalyzer { namespace clientbackend {
-
-//==============================================================================
-/// Error status reported by backends
-///
-class Error {
- public:
-  /// Create an error with the specified message.
-  /// \param msg The message for the error
-  explicit Error(const std::string& msg = "");
-
-  /// Accessor for the message of this error.
-  /// \return The messsage for the error. Empty if no error.
-  const std::string& Message() const { return msg_; }
-
-  /// Does this error indicate OK status?
-  /// \return True if this error indicates "ok"/"success", false if
-  /// error indicates a failure.
-  bool IsOk() const { return msg_.empty(); }
-
-  /// Convenience "success" value. Can be used as Error::Success to
-  /// indicate no error.
-  static const Error Success;
-
- private:
-  friend std::ostream& operator<<(std::ostream&, const Error&);
-  std::string msg_;
-};
-
-//===================================================================================
 
 class ClientBackend;
 class InferInput;

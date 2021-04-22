@@ -39,7 +39,7 @@
       std::cerr << "error: " << (MSG) << ": "               \
                 << error_code_to_string_fn_(err__) << " - " \
                 << error_message_fn_(err__) << std::endl;   \
-      Error newErr = cb::Error(MSG);                        \
+      Error newErr = Error(MSG);                        \
       error_delete_fn_(err__);                              \
       return newErr;                                        \
     }                                                       \

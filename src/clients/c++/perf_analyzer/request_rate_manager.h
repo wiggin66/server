@@ -79,8 +79,8 @@ class RequestRateManager : public LoadManager {
   /// \param factory The ClientBackendFactory object used to create
   /// client to the server.
   /// \param manager Returns a new ConcurrencyManager object.
-  /// \return cb::Error object indicating success or failure.
-  static cb::Error Create(
+  /// \return Error object indicating success or failure.
+  static Error Create(
       const bool async, const bool streaming,
       const uint64_t measurement_window_ms, Distribution request_distribution,
       const int32_t batch_size, const size_t max_threads,
@@ -95,12 +95,12 @@ class RequestRateManager : public LoadManager {
   /// Adjusts the rate of issuing requests to be the same as 'request_rate'
   /// \param request_rate The rate at which requests must be issued to the
   /// server.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error ChangeRequestRate(const double target_request_rate);
+  /// \return Error object indicating success or failure.
+  Error ChangeRequestRate(const double target_request_rate);
 
   /// Resets all worker thread states to beginning of schedule.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error ResetWorkers() override;
+  /// \return Error object indicating success or failure.
+  Error ResetWorkers() override;
 
  protected:
   struct ThreadConfig {

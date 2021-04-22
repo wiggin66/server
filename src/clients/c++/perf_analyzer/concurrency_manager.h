@@ -70,8 +70,8 @@ class ConcurrencyManager : public LoadManager {
   /// \param factory The ClientBackendFactory object used to create
   /// client to the server.
   /// \param manager Returns a new ConcurrencyManager object.
-  /// \return cb::Error object indicating success or failure.
-  static cb::Error Create(
+  /// \return Error object indicating success or failure.
+  static Error Create(
       const bool async, const bool streaming, const int32_t batch_size,
       const size_t max_threads, const size_t max_concurrency,
       const size_t sequence_length, const size_t string_length,
@@ -85,8 +85,8 @@ class ConcurrencyManager : public LoadManager {
   /// Adjusts the number of concurrent requests to be the same as
   /// 'concurrent_request_count' (by creating or pausing threads)
   /// \param concurent_request_count The number of concurrent requests.
-  /// \return cb::Error object indicating success or failure.
-  cb::Error ChangeConcurrencyLevel(const size_t concurrent_request_count);
+  /// \return Error object indicating success or failure.
+  Error ChangeConcurrencyLevel(const size_t concurrent_request_count);
 
  private:
   ConcurrencyManager(

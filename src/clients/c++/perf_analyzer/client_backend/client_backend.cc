@@ -31,24 +31,6 @@
 #include "src/clients/c++/perf_analyzer/client_backend/triton_local/triton_local_client_backend.h"
 
 namespace perfanalyzer { namespace clientbackend {
-
-//================================================
-
-const Error Error::Success("");
-
-Error::Error(const std::string& msg) : msg_(msg) {}
-
-std::ostream&
-operator<<(std::ostream& out, const Error& err)
-{
-  if (!err.msg_.empty()) {
-    out << err.msg_;
-  }
-  return out;
-}
-
-//================================================
-
 std::string
 BackendKindToString(const BackendKind kind)
 {
