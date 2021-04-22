@@ -45,8 +45,7 @@ GetInt(const rapidjson::Value& value, int64_t* integer_value)
       *integer_value = std::atoll(str.c_str());
     }
     catch (...) {
-      return Error(
-          std::string("unable to convert '") + str + "' to integer");
+      return Error(std::string("unable to convert '") + str + "' to integer");
     }
 
   } else if (value.IsInt64()) {

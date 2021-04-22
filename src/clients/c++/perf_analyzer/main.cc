@@ -1163,11 +1163,22 @@ main(int argc, char** argv)
           extra_verbose, &factory),
       "failed to create client factory");
 
+  if (kind == cb::BackendKind::TRITON_LOCAL) {
+    std::string server_library_path = "/opt/tritonserver";
+    std::string memory_type = "system";
+    std::string model_repository_path =
+        "/tmp/host/docker-data/model_unit_test/";
+    FAIL_IF_ERR(
+        factory->AddAdditonalInfo(
+            server_library_path, model_repository_path, memory_type),
+        "cannot add additional info");
+  }
+
   std::unique_ptr<cb::ClientBackend> backend;
+  std::cout << "creating triton client backend.." << std::endl;
   FAIL_IF_ERR(
       factory->CreateClientBackend(&backend),
       "failed to create triton client backend");
-
   std::shared_ptr<pa::ModelParser> parser =
       std::make_shared<pa::ModelParser>(kind);
   if (kind == cb::BackendKind::TRITON) {
@@ -1192,6 +1203,7 @@ main(int argc, char** argv)
     FAIL_IF_ERR(
         backend->ModelConfig(&model_config, model_name, model_version),
         "failed to get model config");
+    std::cout << "initializing parser, using backend" << std::endl;
     FAIL_IF_ERR(
         parser->InitTriton(
             model_metadata, model_config, model_version, input_shapes, backend),
@@ -1309,6 +1321,7 @@ main(int argc, char** argv)
   }
 
   std::unique_ptr<pa::InferenceProfiler> profiler;
+  std::cout << "creating inference profiler, moving over backend" << std::endl;
   FAIL_IF_ERR(
       pa::InferenceProfiler::Create(
           verbose, stability_threshold, measurement_window_ms, max_trials,
@@ -1317,7 +1330,7 @@ main(int argc, char** argv)
       "failed to create profiler");
 
   // pre-run report
-  std::cout << "*** Measurement Settings REMOVE MEEEE2***" << std::endl;
+  std::cout << "*** Measurement Settings REMOVE MEEEE3***" << std::endl;
   if (kind == cb::BackendKind::TRITON ||
       kind == cb::BackendKind::TRITON_LOCAL || using_batch_size) {
     std::cout << "  Batch size: " << batch_size << std::endl;

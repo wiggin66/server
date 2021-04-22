@@ -36,7 +36,7 @@
   {                                                                            \
     const cudaError_t result = FUNC;                                           \
     if (result != cudaSuccess) {                                               \
-      return Error(                                                        \
+      return Error(                                                            \
           "CUDA exception (line " + std::to_string(__LINE__) + "): " +         \
           cudaGetErrorName(result) + " (" + cudaGetErrorString(result) + ")"); \
     }                                                                          \

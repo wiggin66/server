@@ -44,4 +44,4 @@ operator<<(std::ostream& out, const Error& err)
 }
 
 //==============================================================================
-}
+}  // namespace perfanalyzer

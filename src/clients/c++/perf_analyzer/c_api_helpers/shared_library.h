@@ -23,66 +23,19 @@
 // OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#include "src/clients/c++/perf_analyzer/client_backend/triton_local/shared_library.h"
-#include <dlfcn.h>
+#pragma once
 
-/// FIXME: Duplication of server/src/core/shared_library.cc
+#include <string>
+#include "src/clients/c++/perf_analyzer/error.h"
+/// FIXME: Duplication of server/src/core/shared_library.h
 /// Separate shared_library to common library and delete this
 
 namespace perfanalyzer { namespace clientbackend {
+Error OpenLibraryHandle(const std::string& path, void** handle);
 
-Error
-OpenLibraryHandle(const std::string& path, void** handle)
-{
-  std::cout << "OpenLibraryHandle: " << path << std::endl;
-  *handle = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
-  if (*handle == nullptr) {
-    return Error("unable to load backend library: " + std::string(dlerror()));
-  }
-  return Error::Success;
-}
+Error CloseLibraryHandle(void* handle);
 
-Error
-CloseLibraryHandle(void* handle)
-{
-  if (handle != nullptr) {
-    if (dlclose(handle) != 0) {
-      return Error(
-          "unable to unload backend library: " + std::string(dlerror()));
-    }
-  }
-  return Error::Success;
-}
+Error GetEntrypoint(
+    void* handle, const std::string& name, const bool optional, void** befn);
 
-Error
-GetEntrypoint(
-    void* handle, const std::string& name, const bool optional, void** befn)
-{
-  *befn = nullptr;
-  dlerror();
-  void* fn = dlsym(handle, name.c_str());
-  const char* dlsym_error = dlerror();
-  if (dlsym_error != nullptr) {
-    if (optional) {
-      return Error::Success;
-    }
-
-    std::string errstr(dlsym_error);  // need copy as dlclose overwrites
-    return Error(
-        "unable to find required entrypoint '" + name +
-        "' in backend library: " + errstr);
-  }
-
-  if (fn == nullptr) {
-    if (optional) {
-      return Error::Success;
-    }
-
-    return Error(
-        "unable to find required entrypoint '" + name + "' in backend library");
-  }
-
-  *befn = fn;
-  return Error::Success;
-}
 }}  // namespace perfanalyzer::clientbackend

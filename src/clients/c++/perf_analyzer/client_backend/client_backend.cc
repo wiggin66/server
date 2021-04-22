@@ -25,10 +25,12 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/clients/c++/perf_analyzer/client_backend/client_backend.h"
+#include "src/clients/c++/perf_analyzer/c_api_helpers/triton_loader.h"
 #include "src/clients/c++/perf_analyzer/client_backend/tensorflow_serving/tfserve_client_backend.h"
 #include "src/clients/c++/perf_analyzer/client_backend/torchserve/torchserve_client_backend.h"
 #include "src/clients/c++/perf_analyzer/client_backend/triton/triton_client_backend.h"
 #include "src/clients/c++/perf_analyzer/client_backend/triton_local/triton_local_client_backend.h"
+#include "src/clients/c++/perf_analyzer/error.h"
 
 namespace perfanalyzer { namespace clientbackend {
 std::string
@@ -79,6 +81,7 @@ ClientBackendFactory::Create(
     std::shared_ptr<Headers> http_headers, const bool verbose,
     std::shared_ptr<ClientBackendFactory>* factory)
 {
+  std::cout << "creating new backend factory..." << std::endl;
   factory->reset(new ClientBackendFactory(
       kind, url, protocol, compression_algorithm, http_headers, verbose));
   return Error::Success;
@@ -90,8 +93,26 @@ ClientBackendFactory::CreateClientBackend(
 {
   RETURN_IF_CB_ERROR(ClientBackend::Create(
       kind_, url_, protocol_, compression_algorithm_, http_headers_, verbose_,
-      client_backend));
+      loader_, client_backend));
   return Error::Success;
+}
+
+Error
+ClientBackendFactory::AddAdditonalInfo(
+    const std::string& server_library_path,
+    const std::string& model_repository_path, const std::string& memory_type)
+{
+  if (server_library_path.empty() || model_repository_path.empty() ||
+      memory_type.empty()) {
+    return Error("Incomplete additional info to start client backend");
+  } else {
+    server_library_path_ = server_library_path;
+    model_repository_path_ = model_repository_path;
+    memory_type_ = memory_type;
+    RETURN_IF_ERROR(TritonLoader::Create(
+        server_library_path, model_repository_path, memory_type, &loader_));
+    return Error::Success;
+  }
 }
 
 //
@@ -102,6 +123,7 @@ ClientBackend::Create(
     const BackendKind kind, const std::string& url, const ProtocolType protocol,
     const GrpcCompressionAlgorithm compression_algorithm,
     std::shared_ptr<Headers> http_headers, const bool verbose,
+    const std::shared_ptr<TritonLoader>& loader,
     std::unique_ptr<ClientBackend>* client_backend)
 {
   std::unique_ptr<ClientBackend> local_backend;
@@ -119,7 +141,7 @@ ClientBackend::Create(
   } else if (kind == TRITON_LOCAL) {
     RETURN_IF_CB_ERROR(TritonLocalClientBackend::Create(
         url, protocol, BackendToGrpcType(compression_algorithm), http_headers,
-        verbose, &local_backend));
+        verbose, loader, &local_backend));
   } else {
     return Error("unsupported client backend requested");
   }

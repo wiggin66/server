@@ -85,8 +85,7 @@ DataLoader::ReadDataFromJSON(
   if (d.HasParseError()) {
     std::cerr << "Error  : " << d.GetParseError() << '\n'
               << "Offset : " << d.GetErrorOffset() << '\n';
-    return Error(
-        "failed to parse the specified json file for reading inputs");
+    return Error("failed to parse the specified json file for reading inputs");
   }
 
   if (!d.HasMember("data")) {

@@ -50,6 +50,8 @@ target_link_libraries(
   ts-client-backend-library
   PUBLIC CURL::libcurl
   PUBLIC TRITON::httpclient_static
+    triton-core-serverstub  # from repo-core
+  triton-core-serverapi   # from repo-core
 )
 
 if(${TRITON_ENABLE_GPU})

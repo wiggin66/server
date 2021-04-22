@@ -27,32 +27,32 @@
 cmake_minimum_required (VERSION 3.18)
 
 set(
-    TRITON_LOCAL_CLIENT_BACKEND_SRCS
-    triton_local_client_backend.cc
+  C_API_HELPERS_SRCS
+  shared_library.cc
+  triton_loader.cc
 )
 
 set(
-    TRITON_LOCAL_CLIENT_BACKEND_HDRS
-    triton_local_client_backend.h
+    C_API_HELPERS_HDRS
+     shared_library.h
+     triton_loader.h
+     common.h
 )
 
 add_library(
-    triton-local-client-backend-library  EXCLUDE_FROM_ALL OBJECT
-    ${TRITON_LOCAL_CLIENT_BACKEND_SRCS}
-    ${TRITON_LOCAL_CLIENT_BACKEND_HDRS}
+    c-api-helpers-library  EXCLUDE_FROM_ALL OBJECT
+    ${C_API_HELPERS_SRCS}
+    ${C_API_HELPERS_HDRS}
 )
 
 target_link_libraries(
-  triton-local-client-backend-library
+  c-api-helpers-library
   PUBLIC model-config-library
-  PUBLIC TRITON::grpcclient_static
-  PUBLIC TRITON::httpclient_static
-  PUBLIC c-api-helpers-library
   triton-core-serverstub  # from repo-core
   triton-core-serverapi   # from repo-core
 )
 
 if(${TRITON_ENABLE_GPU})
-    target_include_directories(triton-local-client-backend-library PUBLIC ${CUDA_INCLUDE_DIRS})
-    target_link_libraries(triton-local-client-backend-library PRIVATE ${CUDA_LIBRARIES})
+    target_include_directories(c-api-helpers-library PUBLIC ${CUDA_INCLUDE_DIRS})
+    target_link_libraries(c-api-helpers-library PRIVATE ${CUDA_LIBRARIES})
 endif() # TRITON_ENABLE_GPU

@@ -23,11 +23,12 @@
 // OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#include "src/clients/c++/perf_analyzer/client_backend/triton_local/triton_loader.h"
+#include "src/clients/c++/perf_analyzer/c_api_helpers/triton_loader.h"
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <fstream>
 #include <string>
+#include "src/clients/c++/perf_analyzer/c_api_helpers/common.h"
 
 #include <thread>
 
@@ -121,23 +122,36 @@ ResponseRelease(
 }
 
 }  // namespace
+Error
+TritonLoader::Create(
+    const std::string& library_directory, const std::string& model_repository,
+    const std::string& memory_type, std::shared_ptr<TritonLoader>* loader)
+{
+  if (library_directory.empty() || model_repository.empty()) {
+    return Error("cannot load server, paths are empty");
+  }
+  std::shared_ptr<TritonLoader> triton_loader = std::make_shared<TritonLoader>(
+      library_directory, model_repository, memory_type);
+
+  Error status = triton_loader->LoadServerLibrary();
+  assert(status.IsOk());
+  status = triton_loader->StartTriton(memory_type, false);
+  assert(status.IsOk());
+
+  *loader = std::move(triton_loader);
+  return Error::Success;
+}
 
 TritonLoader::TritonLoader(
-    std::string library_directory, std::string memory_type,
-    std::string model_repository_path, std::string model_name)
-    : library_directory_(library_directory),
-      model_repository_path_(model_repository_path), model_name_(model_name)
+    const std::string& library_directory, const std::string& model_repository,
+    const std::string& memory_type)
 {
-  Error status = LoadServerLibrary();
-  assert(status.IsOk());
-  status = StartTriton(memory_type, true);
-  assert(status.IsOk());
-  status = LoadModel();
-  assert(status.IsOk());
+  library_directory_ = library_directory;
+  model_repository_path_ = model_repository;
 }
 
 Error
-TritonLoader::StartTriton(std::string& memory_type, bool isVerbose)
+TritonLoader::StartTriton(const std::string& memory_type, bool isVerbose)
 {
   if (!memory_type.empty()) {
     enforce_memory_type_ = true;
@@ -148,7 +162,7 @@ TritonLoader::StartTriton(std::string& memory_type, bool isVerbose)
     } else if (memory_type.compare("gpu")) {
       requested_memory_type_ = TRITONSERVER_MEMORY_GPU;
     } else {
-      RETURN_ERROR("Specify one of the following types: system, pinned or gpu");
+      return Error("Specify one of the following types: system, pinned or gpu");
     }
     requested_memory_type = requested_memory_type_;
     enforce_memory_type = enforce_memory_type_;
@@ -166,7 +180,7 @@ TritonLoader::StartTriton(std::string& memory_type, bool isVerbose)
             << ", minor: " << api_version_minor << std::endl;
   if ((TRITONSERVER_API_VERSION_MAJOR != api_version_major) ||
       (TRITONSERVER_API_VERSION_MINOR > api_version_minor)) {
-    RETURN_ERROR("triton server API version mismatch");
+    return Error("triton server API version mismatch");
   }
 
   // Create the server...
@@ -223,7 +237,7 @@ TritonLoader::StartTriton(std::string& memory_type, bool isVerbose)
     }
 
     if (++health_iters >= 10) {
-      RETURN_ERROR("failed to find healthy inference server");
+      return Error("failed to find healthy inference server");
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -248,81 +262,74 @@ TritonLoader::StartTriton(std::string& memory_type, bool isVerbose)
         message_delete_fn_(server_metadata_message),
         "deleting status metadata");
   }
+  server_is_ready_ = true;
 
   return Error::Success;
 }
 
 Error
-TritonLoader::LoadModel()
+TritonLoader::ServerMetaData(rapidjson::Document* server_metadata) const
 {
+  if (!ServerIsReady()) {
+    return Error("Model is not loaded and/or server is not ready");
+  }
+  std::cout << "ServerMetaData..." << std::endl;
+
+  TRITONSERVER_Message* server_metadata_message;
+  RETURN_IF_TRITONSERVER_ERROR(
+      server_metadata_fn_(server_.get(), &server_metadata_message),
+      "unable to get server metadata message");
+  const char* buffer;
+  size_t byte_size;
+  RETURN_IF_TRITONSERVER_ERROR(
+      message_serialize_to_json_fn_(
+          server_metadata_message, &buffer, &byte_size),
+      "unable to serialize server metadata message");
+  server_metadata->Parse(buffer, byte_size);
+  if (server_metadata->HasParseError()) {
+    return Error(
+        "error: failed to parse server metadata from JSON: " +
+        std::string(GetParseError_En(server_metadata->GetParseError())) +
+        " at " + std::to_string(server_metadata->GetErrorOffset()));
+  }
+  RETURN_IF_TRITONSERVER_ERROR(
+      message_delete_fn_(server_metadata_message), "deleting status metadata");
+  return Error::Success;
+}
+
+Error
+TritonLoader::LoadModel(
+    const std::string& model_name, const std::string& model_version)
+{
+  std::cout << "loading model..." << std::endl;
+  if (!ServerIsReady()) {
+    return Error("server is not ready, abort!");
+  }
+  model_name_ = model_name;
+
+  RETURN_IF_ERROR(GetModelVersionFromString(model_version, &model_version_));
   // Wait for the model to become available.
-  bool is_torch_model = false;
-  bool is_int = true;
   bool is_ready = false;
   size_t health_iters = 0;
 
   // some error handling
   if (model_repository_path_.empty()) {
-    RETURN_ERROR("Need to specify model repository");
+    return Error("Need to specify model repository");
   }
   while (!is_ready) {
     RETURN_IF_TRITONSERVER_ERROR(
-        model_is_ready_fn_(server_.get(), model_name_.c_str(), 1, &is_ready),
+        model_is_ready_fn_(
+            server_.get(), model_name_.c_str(), model_version_, &is_ready),
         "unable to get model readiness");
     if (!is_ready) {
       if (++health_iters >= 10) {
-        RETURN_ERROR("model failed to be ready in 10 iterations");
+        return Error("model failed to be ready in 10 iterations");
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(500));
       continue;
     }
-
-    TRITONSERVER_Message* model_metadata_message;
-    RETURN_IF_TRITONSERVER_ERROR(
-        model_metadata_fn_(
-            server_.get(), model_name_.c_str(), 1, &model_metadata_message),
-        "unable to get model metadata message");
-    const char* buffer;
-    size_t byte_size;
-    RETURN_IF_TRITONSERVER_ERROR(
-        message_serialize_to_json_fn_(
-            model_metadata_message, &buffer, &byte_size),
-        "unable to serialize model status protobuf");
-
-    rapidjson::Document model_metadata;
-    model_metadata.Parse(buffer, byte_size);
-    if (model_metadata.HasParseError()) {
-      RETURN_ERROR(
-          "error: failed to parse model metadata from JSON: " +
-          std::string(GetParseError_En(model_metadata.GetParseError())) +
-          " at " + std::to_string(model_metadata.GetErrorOffset()));
-    }
-
-    RETURN_IF_TRITONSERVER_ERROR(
-        message_delete_fn_(model_metadata_message), "deleting status protobuf");
-
-    if (strcmp(model_metadata["name"].GetString(), model_name_.c_str())) {
-      RETURN_ERROR("unable to find metadata for model");
-    }
-
-    bool found_version = false;
-    if (model_metadata.HasMember("versions")) {
-      for (const auto& version : model_metadata["versions"].GetArray()) {
-        if (strcmp(version.GetString(), "1") == 0) {
-          found_version = true;
-          break;
-        }
-      }
-    }
-    if (!found_version) {
-      RETURN_ERROR("unable to find version 1 status for model");
-    }
-
-    RETURN_IF_TRITONSERVER_ERROR(
-        ParseModelMetadata(model_metadata, &is_int, &is_torch_model),
-        "parsing model metadata");
   }
-  std::cout << "loaded model " << model_name_ << std::endl;
+
   // Create the allocator that will be used to allocate buffers for
   // the result tensors.
   RETURN_IF_TRITONSERVER_ERROR(
@@ -336,6 +343,100 @@ TritonLoader::LoadModel()
               ResponseRelease),
           nullptr /* start_fn */),
       "creating response allocator");
+
+  std::cout << "loaded model " << model_name_ << std::endl;
+  model_is_loaded_ = true;  // flag to confirm model is correct and loaded
+  return Error::Success;
+}
+
+Error
+TritonLoader::ModelMetadata(rapidjson::Document* model_metadata) const
+{
+  if (!ModelIsLoaded() || !ServerIsReady()) {
+    return Error("Model is not loaded and/or server is not ready");
+  }
+  std::cout << "ModelMetadata..." << std::endl;
+  TRITONSERVER_Message* model_metadata_message;
+
+  // get model metadata
+  RETURN_IF_TRITONSERVER_ERROR(
+      model_metadata_fn_(
+          server_.get(), model_name_.c_str(), model_version_,
+          &model_metadata_message),
+      "unable to get model metadata message");
+  const char* buffer;
+  size_t byte_size;
+  RETURN_IF_TRITONSERVER_ERROR(
+      message_serialize_to_json_fn_(
+          model_metadata_message, &buffer, &byte_size),
+      "unable to serialize model status protobuf");
+
+  model_metadata->Parse(buffer, byte_size);
+  if (model_metadata->HasParseError()) {
+    return Error(
+        "error: failed to parse model metadata from JSON: " +
+        std::string(GetParseError_En(model_metadata->GetParseError())) +
+        " at " + std::to_string(model_metadata->GetErrorOffset()));
+  }
+
+  RETURN_IF_TRITONSERVER_ERROR(
+      message_delete_fn_(model_metadata_message), "deleting status protobuf");
+
+  if (strcmp((*model_metadata)["name"].GetString(), model_name_.c_str())) {
+    return Error("unable to find metadata for model");
+  }
+
+  bool found_version = false;
+  if (model_metadata->HasMember("versions")) {
+    for (const auto& version : (*model_metadata)["versions"].GetArray()) {
+      if (strcmp(version.GetString(), std::to_string(model_version_).c_str()) ==
+          0) {
+        found_version = true;
+        break;
+      }
+    }
+  }
+  if (!found_version) {
+    std::string msg = "unable to find version " +
+                      std::to_string(model_version_) + " status for model";
+    return Error(msg);
+  }
+  return Error::Success;
+}
+
+Error
+TritonLoader::ModelConfig(rapidjson::Document* model_config) const
+{
+  if (!ModelIsLoaded() || !ServerIsReady()) {
+    return Error("Model is not loaded and/or server is not ready");
+  }
+  std::cout << "ModelConfig..." << std::endl;
+
+  TRITONSERVER_Message* model_config_message;
+  uint32_t config_version = 1;
+  RETURN_IF_TRITONSERVER_ERROR(
+      model_config_fn_(
+          server_.get(), model_name_.c_str(), model_version_, config_version,
+          &model_config_message),
+      "unable to get model config message");
+  const char* buffer;
+  size_t byte_size;
+  RETURN_IF_TRITONSERVER_ERROR(
+      message_serialize_to_json_fn_(model_config_message, &buffer, &byte_size),
+      "unable to serialize model config status protobuf");
+
+  model_config->Parse(buffer, byte_size);
+  if (model_config->HasParseError()) {
+    return Error(
+        "error: failed to parse model config from JSON: " +
+        std::string(GetParseError_En(model_config->GetParseError())) + " at " +
+        std::to_string(model_config->GetErrorOffset()));
+  }
+
+  RETURN_IF_TRITONSERVER_ERROR(
+      message_delete_fn_(model_config_message),
+      "deleting server config status protobuf");
+
   return Error::Success;
 }
 
@@ -394,6 +495,7 @@ TritonLoader::LoadServerLibrary()
   TritonServerErrorMessageFn_t emfn;
   TritonServerErrorDeleteFn_t edfn;
   TritonServerErrorCodeToStringFn_t ectsfn;
+  TritonServerModelConfigFn_t mcfn;
 
   RETURN_IF_ERROR(GetEntrypoint(
       dlhandle_, "TRITONSERVER_ApiVersion", true /* optional */,
@@ -517,6 +619,9 @@ TritonLoader::LoadServerLibrary()
   RETURN_IF_ERROR(GetEntrypoint(
       dlhandle_, "TRITONSERVER_ErrorCodeString", true /* optional */,
       reinterpret_cast<void**>(&ectsfn)));
+  RETURN_IF_ERROR(GetEntrypoint(
+      dlhandle_, "TRITONSERVER_ServerModelConfig", true /* optional */,
+      reinterpret_cast<void**>(&mcfn)));
 
   api_version_fn_ = apifn;
   options_new_fn_ = onfn;
@@ -564,6 +669,7 @@ TritonLoader::LoadServerLibrary()
   error_message_fn_ = emfn;
   error_delete_fn_ = edfn;
   error_code_to_string_fn_ = ectsfn;
+  model_config_fn_ = mcfn;
 
   return Error::Success;
 }
@@ -637,6 +743,8 @@ TritonLoader::FileExists(std::string& filepath)
   }
 }
 
+
+/// delete
 TRITONSERVER_Error*
 TritonLoader::ParseModelMetadata(
     const rapidjson::Document& model_metadata, bool* is_int,

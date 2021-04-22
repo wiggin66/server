@@ -26,20 +26,25 @@
 #pragma once
 
 #include <fstream>
+#include <iostream>
+#include <memory>
 #include <string>
-#include "src/clients/c++/perf_analyzer/client_backend/triton_local/shared_library.h"
-#include "src/clients/c++/perf_analyzer/perf_utils.h"
+#include "src/clients/c++/perf_analyzer/c_api_helpers/shared_library.h"
+#include "src/clients/c++/perf_analyzer/error.h"
 #include "triton/core/tritonserver.h"
+
+#include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
 
 // If TRITONSERVER error is non-OK, return the corresponding status.
 #define RETURN_IF_TRITONSERVER_ERROR(E, MSG)                \
   do {                                                      \
     TRITONSERVER_Error* err__ = (E);                        \
     if (err__ != nullptr) {                                 \
-      std::cerr << "error: " << (MSG) << ": "               \
+      std::cout << "error: " << (MSG) << ": "               \
                 << error_code_to_string_fn_(err__) << " - " \
                 << error_message_fn_(err__) << std::endl;   \
-      Error newErr = Error(MSG);                        \
+      Error newErr = Error(MSG);                            \
       error_delete_fn_(err__);                              \
       return newErr;                                        \
     }                                                       \
@@ -49,18 +54,18 @@
   do {                                                    \
     TRITONSERVER_Error* err__ = (E);                      \
     if (err__ != nullptr) {                               \
-      std::cerr << error_message_fn_(err__) << std::endl; \
+      std::cout << error_message_fn_(err__) << std::endl; \
       error_delete_fn_(err__);                            \
     }                                                     \
   } while (false)
 
-namespace cb = perfanalyzer::clientbackend;
 namespace perfanalyzer { namespace clientbackend {
+
 class TritonLoader {
  public:
-  TritonLoader(
-      std::string library_directory, std::string memory_type,
-      std::string model_repository_path, std::string model_name);
+  static Error Create(
+      const std::string& library_directory, const std::string& model_repository,
+      const std::string& memory_type, std::shared_ptr<TritonLoader>* loader);
   ~TritonLoader()
   {
     FAIL_IF_ERR(
@@ -68,9 +73,23 @@ class TritonLoader {
     ClearHandles();
   }
 
-  Error StartTriton(std::string& memory_type, bool isVerbose);
+  TritonLoader(
+      const std::string& library_directory, const std::string& model_repository,
+      const std::string& memory_type);
 
-  Error LoadModel();
+  Error StartTriton(const std::string& memory_type, bool isVerbose);
+
+  Error LoadModel(
+      const std::string& model_name, const std::string& model_version);
+
+  Error ModelMetadata(rapidjson::Document* model_metadata) const;
+
+  Error ModelConfig(rapidjson::Document* model_config) const;
+
+  Error ServerMetaData(rapidjson::Document* server_metadata) const;
+
+  bool ModelIsLoaded() const { return model_is_loaded_; }
+  bool ServerIsReady() const { return server_is_ready_; }
 
   // TRITONSERVER_ApiVersion
   typedef TRITONSERVER_Error* (*TritonServerApiVersionFn_t)(
@@ -218,6 +237,11 @@ class TritonLoader {
   // TRITONSERVER_ErrorCodeString
   typedef const char* (*TritonServerErrorCodeToStringFn_t)(
       TRITONSERVER_Error* error);
+  // TRITONSERVER_ServerModelConfig
+  typedef TRITONSERVER_Error* (*TritonServerModelConfigFn_t)(
+      TRITONSERVER_Server* server, const char* model_name,
+      const int64_t model_version, const uint32_t config_version,
+      TRITONSERVER_Message** model_config);
 
  private:
   /// Load all tritonserver.h functions onto triton_loader
@@ -289,18 +313,22 @@ class TritonLoader {
   TritonServerErrorMessageFn_t error_message_fn_;
   TritonServerErrorDeleteFn_t error_delete_fn_;
   TritonServerErrorCodeToStringFn_t error_code_to_string_fn_;
+  TritonServerModelConfigFn_t model_config_fn_;
 
   TRITONSERVER_ServerOptions* options_;
   TRITONSERVER_Server* server_ptr_;
   TRITONSERVER_ResponseAllocator* allocator_ = nullptr;
   std::shared_ptr<TRITONSERVER_Server> server_;
-  const std::string library_directory_;
+  std::string library_directory_;
   const std::string SERVER_LIBRARY_PATH = "/lib/libtritonserver.so";
   int verbose_level_ = 0;
   bool enforce_memory_type_ = false;
-  const std::string model_repository_path_;
-  const std::string model_name_;
+  std::string model_repository_path_;
+  std::string model_name_;
+  int64_t model_version_;
   TRITONSERVER_memorytype_enum requested_memory_type_ = TRITONSERVER_MEMORY_CPU;
+  bool model_is_loaded_ = false;
+  bool server_is_ready_ = false;
 };
 
 

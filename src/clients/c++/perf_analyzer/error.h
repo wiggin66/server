@@ -52,11 +52,6 @@
   }                                                                \
   while (false)
 
-#define RETURN_ERROR(S) \
-  do {                  \
-    return Error(S);    \
-  } while (false)
-
 namespace perfanalyzer {
 //==============================================================================
 /// Error status reported by backends

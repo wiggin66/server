@@ -27,13 +27,11 @@
 
 #include <string>
 
-#include "src/clients/c++/perf_analyzer/client_backend/client_backend.h"
-#include "src/clients/c++/perf_analyzer/client_backend/triton_local/triton_loader.h"
-#include "src/clients/c++/perf_analyzer/perf_utils.h"
-
 #include "src/clients/c++/examples/shm_utils.h"
 #include "src/clients/c++/library/grpc_client.h"
 #include "src/clients/c++/library/http_client.h"
+#include "src/clients/c++/perf_analyzer/c_api_helpers/triton_loader.h"
+#include "src/clients/c++/perf_analyzer/client_backend/client_backend.h"
 
 #define RETURN_IF_TRITON_ERROR(S)       \
   do {                                  \
@@ -76,6 +74,7 @@ class TritonLocalClientBackend : public ClientBackend {
       const std::string& url, const ProtocolType protocol,
       const grpc_compression_algorithm compression_algorithm,
       std::shared_ptr<nic::Headers> http_headers, const bool verbose,
+      const std::shared_ptr<TritonLoader>& loader,
       std::unique_ptr<ClientBackend>* client_backend);
 
   /// See ClientBackend::ServerExtensions()
@@ -157,10 +156,7 @@ class TritonLocalClientBackend : public ClientBackend {
       std::shared_ptr<nic::Headers> http_headers)
       : ClientBackend(BackendKind::TRITON_LOCAL), protocol_(protocol),
         compression_algorithm_(compression_algorithm),
-        http_headers_(http_headers),
-        loader_(
-            "/opt/tritonserver", "system",
-            "/tmp/host/docker-data/model_unit_test/", "sig_tag0")
+        http_headers_(http_headers)
   {
   }
 
@@ -197,7 +193,7 @@ class TritonLocalClientBackend : public ClientBackend {
   const ProtocolType protocol_;
   const grpc_compression_algorithm compression_algorithm_;
   std::shared_ptr<nic::Headers> http_headers_;
-  TritonLoader loader_;
+  std::weak_ptr<TritonLoader> loader_;
 };
 
 //==============================================================

@@ -27,17 +27,40 @@
 
 #include <string>
 #include "src/clients/c++/perf_analyzer/client_backend/client_backend.h"
-#include "src/clients/c++/perf_analyzer/perf_utils.h"
-
-/// FIXME: Duplication of server/src/core/shared_library.h
+#include "src/clients/c++/perf_analyzer/error.h"
+/// FIXME: Duplication of server/src/servers/common.cc
 /// Separate shared_library to common library and delete this
 
 namespace perfanalyzer { namespace clientbackend {
-Error OpenLibraryHandle(const std::string& path, void** handle);
 
-Error CloseLibraryHandle(void* handle);
+Error
+GetModelVersionFromString(const std::string& version_string, int64_t* version)
+{
+  if (version_string.empty()) {
+    *version = 1;
+    return Error::Success;
+  }
 
-Error GetEntrypoint(
-    void* handle, const std::string& name, const bool optional, void** befn);
+  try {
+    *version = std::stol(version_string);
+  }
+  catch (std::exception& e) {
+    return Error(
+        std::string(
+            "failed to get model version from specified version string '" +
+            version_string + "' (details: " + e.what() +
+            "), version should be an integral value > 0")
+            .c_str());
+  }
+
+  if (*version < 0) {
+    return Error(std::string(
+                     "invalid model version specified '" + version_string +
+                     "' , version should be an integral value > 0")
+                     .c_str());
+  }
+
+  return Error::Success;
+}
 
 }}  // namespace perfanalyzer::clientbackend

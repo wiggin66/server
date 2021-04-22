@@ -37,8 +37,8 @@
 #include <memory>
 #include <random>
 
-#include "src/core/constants.h"
 #include "src/clients/c++/perf_analyzer/error.h"
+#include "src/core/constants.h"
 namespace cb = perfanalyzer::clientbackend;
 namespace pa = perfanalyzer;
 
@@ -70,8 +70,7 @@ constexpr uint64_t NO_LIMIT = 0;
 // \param datatype Returns the datatype in perf_analyzer space.
 // \return error status. Returns Non-Ok if an error is encountered during
 //  read operation.
-Error ConvertDTypeFromTFS(
-    const std::string& tf_dtype, std::string* datatype);
+Error ConvertDTypeFromTFS(const std::string& tf_dtype, std::string* datatype);
 
 // Parse the communication protocol type
 cb::ProtocolType ParseProtocol(const std::string& str);
@@ -88,8 +87,7 @@ Error ReadFile(const std::string& path, std::vector<char>* contents);
 // \param contents The string vector that will contain the data read
 // \return error status. Returns Non-Ok if an error is encountered during
 //  read operation.
-Error ReadTextFile(
-    const std::string& path, std::vector<std::string>* contents);
+Error ReadTextFile(const std::string& path, std::vector<std::string>* contents);
 
 // Reads the time intervals in microseconds from file specified by path into
 // vector of time intervals in nanoseconds.

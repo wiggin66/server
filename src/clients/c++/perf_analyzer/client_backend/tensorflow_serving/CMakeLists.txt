@@ -114,6 +114,8 @@ target_link_libraries(
   PUBLIC gRPC::grpc
   PUBLIC protobuf::libprotobuf
   PUBLIC TRITON::grpcclient_static
+    triton-core-serverstub  # from repo-core
+  triton-core-serverapi   # from repo-core
 )
 
 if(${TRITON_ENABLE_GPU})
